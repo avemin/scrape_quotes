@@ -11,11 +11,10 @@ MAIN_URL = 'https://quotes.toscrape.com'
 
 quotes_date = []
 urls = []
-authors = []
 
 
 async def get_page_data(session, page):
-    """Функция парсер"""
+    """Функция парсер страниц с постами"""
     url = URL + str(page)
     headers = {
         'accept': (
@@ -54,31 +53,31 @@ async def get_page_data(session, page):
                     }
                  }
             )
-    #данный участок кода проходит 10 итераций, это снижает производительность
-    for author_url in set(urls):
-        async with session.get(
-            url=MAIN_URL+author_url, headers=headers
-        ) as response:
-            response_text = await response.text()
-            soup = BeautifulSoup(response_text, 'lxml')
-            author = soup.find('h3', class_='author-title').text.rstrip()
 
-            if author not in authors:
-                authors.append(author)
-                quotes_date.append(
-                    {author: {
-                        'born_date':
-                            soup.find('span', class_='author-born-date').text,
-                        'born_location':
-                            soup.find(
-                                'span', class_='author-born-location'
-                                ).text,
-                        'description':
-                            soup.find(
-                                'div', class_='author-description'
-                                ).text.lstrip()
-                            }}
-                )
+
+async def get_page_author(session, author_url):
+    """Функция парсер страниц авторов"""
+    async with session.get(
+        url=MAIN_URL+author_url
+    ) as response:
+        response_text = await response.text()
+        soup = BeautifulSoup(response_text, 'lxml')
+        author = soup.find('h3', class_='author-title').text.rstrip()
+        print(f'Скрапинг страницы автора: {author}')
+        quotes_date.append(
+            {author: {
+                'born_date':
+                    soup.find('span', class_='author-born-date').text,
+                'born_location':
+                    soup.find(
+                        'span', class_='author-born-location'
+                        ).text,
+                'description':
+                    soup.find(
+                        'div', class_='author-description'
+                        ).text.lstrip()
+                    }}
+        )
 
 
 async def gather_data():
@@ -87,7 +86,7 @@ async def gather_data():
     и парсим топ 10 тегов
     """
     async with aiohttp.ClientSession() as session:
-        async with session.get(url=URL+str(1)) as response:
+        async with session.get(url=MAIN_URL) as response:
             response_text = await response.text()
             soup = BeautifulSoup(response_text, 'lxml')
             top_tags = soup.find_all('span', class_='tag-item')
@@ -96,11 +95,18 @@ async def gather_data():
                     [top_tags[i].text.strip() for i in range(len(top_tags))]}
                 )
         tasks = []
+        tasks1 = []
+
         for page in range(1, 11):
             task = asyncio.create_task(get_page_data(session, page))
             tasks.append(task)
-
         await asyncio.gather(*tasks)
+
+        for author_url in set(urls):
+            task1 = asyncio.create_task(get_page_author(session, author_url))
+            tasks1.append(task1)
+
+        await asyncio.gather(*tasks1)
 
 
 def main():
