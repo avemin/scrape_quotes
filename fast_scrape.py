@@ -5,9 +5,18 @@ import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
 
-
 URL = 'https://quotes.toscrape.com/page/'
 MAIN_URL = 'https://quotes.toscrape.com'
+HEADERS = {
+    'accept': (
+            'text/html, application/xhtml + xml, application/xml;'
+            'q = 0.9,image/avif,image/webp,*/*;q = 0.8'
+            ),
+    'user-agent': (
+            'Mozilla/5.0(X11;Ubuntu;Linux x86_64; rv: 96.0) '
+            'Gecko/20100101 Firefox/96.0'
+                ),
+}
 
 quotes_date = []
 urls = []
@@ -16,18 +25,8 @@ urls = []
 async def get_page_data(session, page):
     """Функция парсер страниц с постами"""
     url = URL + str(page)
-    headers = {
-        'accept': (
-                'text/html, application/xhtml + xml, application/xml;'
-                'q = 0.9,image/avif,image/webp,*/*;q = 0.8'
-                ),
-        'user-agent': (
-                'Mozilla/5.0(X11;Ubuntu;Linux x86_64; rv: 96.0) '
-                'Gecko/20100101 Firefox/96.0'
-                 ),
-    }
     print(f'Скрапинг страницы №: {page}')
-    async with session.get(url=url, headers=headers) as response:
+    async with session.get(url=url, headers=HEADERS) as response:
         response_text = await response.text()
         soup = BeautifulSoup(response_text, 'lxml')
         posts = soup.find_all('div', class_='quote')
@@ -58,7 +57,7 @@ async def get_page_data(session, page):
 async def get_page_author(session, author_url):
     """Функция парсер страниц авторов"""
     async with session.get(
-        url=MAIN_URL+author_url
+        url=MAIN_URL+author_url, headers=HEADERS
     ) as response:
         response_text = await response.text()
         soup = BeautifulSoup(response_text, 'lxml')
